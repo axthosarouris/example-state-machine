@@ -1,0 +1,137 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+    A simple example of state machines
+  
+Resources:
+
+  HelloStates:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineType: STANDARD
+      Definition:
+        Comment: "Hello World state machine"
+        StartAt: FirstState
+        States:
+          FirstState:
+            Type: Task
+            Resource: !GetAtt HelloWorld.Arn
+            Next: ProcessMessage
+          ProcessMessage:
+            Type: Choice
+            Choices:
+             -  Variable: "$.left"
+                BooleanEquals: true
+                Next: CapitalizeStrings
+            Default: ReverseStrings
+
+          ReverseStrings:
+            Type: Task
+            Resource: !GetAtt ReverseStringsHandler.Arn
+            End: true
+          CapitalizeStrings:
+            Type: Task
+            Resource: !GetAtt UpperCaseHandler.Arn
+            End: true
+
+      RoleArn: !GetAtt StateMachineRole.Arn
+
+
+  HelloWorld:
+    Type: AWS::Serverless::Function
+    Properties:
+      Architectures:
+        - arm64
+      CodeUri: lib
+      Description: Hello World function
+      Handler: com.github.axthosarouris.HelloHandler::handleRequest
+      MemorySize: 1789
+      PackageType: Zip
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: java11
+      Timeout: 60
+
+  ReverseStringsHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      Architectures:
+        - arm64
+      CodeUri: lib
+      Description: Hello World function
+      Handler: com.github.axthosarouris.ReverseStringsHandler::handleRequest
+      MemorySize: 1789
+      PackageType: Zip
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: java11
+      Timeout: 60
+
+  UpperCaseHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      Architectures:
+        - arm64
+      CodeUri: lib
+      Description: Hello World function
+      Handler: com.github.axthosarouris.UpperCaseHandler::handleRequest
+      MemorySize: 1789
+      PackageType: Zip
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: java11
+      Timeout: 60
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+
+  StateMachineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+            Action: sts:AssumeRole
+
+  StateMachinePermissions:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub StateMachinePermissions-${AWS::StackName}
+      Roles:
+        - !Ref StateMachineRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource: "*"
+
+  DefaultLambdaPermissions:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub DefaultLambdaPermissions-${AWS::StackName}
+      Roles:
+        - !Ref LambdaRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+              - lambda:InvokeFunction
+            Resource: "*"
