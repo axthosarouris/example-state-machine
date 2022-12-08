@@ -1,13 +1,23 @@
 package com.github.axthosarouris;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
 import org.apache.commons.lang3.StringUtils;
 
-public class ReverseStringsHandler implements RequestHandler<Message, Message> {
+import java.util.stream.Collectors;
+
+public class ReverseStringsHandler extends LambdaHandler<Batch, Batch> {
+
+
+    public ReverseStringsHandler() {
+        super(Batch.class);
+    }
 
     @Override
-    public Message handleRequest(Message input, Context context) {
-        return Message.create(StringUtils.reverse(input.getText()),input.isLeft());
+    protected Batch processInput(Batch input) {
+        var reversed = input.getItems().stream()
+                .map(StringUtils::reverse)
+                .collect(Collectors.toList());
+        return Batch.create(reversed);
     }
+
+
 }

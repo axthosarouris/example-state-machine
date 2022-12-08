@@ -25,13 +25,45 @@ Resources:
                 Next: CapitalizeStrings
             Default: ReverseStrings
 
-          ReverseStrings:
-            Type: Task
-            Resource: !GetAtt ReverseStringsHandler.Arn
-            End: true
           CapitalizeStrings:
+            Type: Map
+            Next: LogOutput
+            ItemsPath: "$.lines"
+            ItemBatcher:
+              MaxItemsPerBatch: 5
+              MaxInputBytesPerBatch: 256000
+            ItemProcessor:
+              ProcessorConfig:
+                Mode: DISTRIBUTED
+                ExecutionType: STANDARD
+              StartAt: CapitalizeString
+              States:
+                CapitalizeString:
+                  Type: Task
+                  Resource: !GetAtt UpperCaseHandler.Arn
+                  End: true
+
+          ReverseStrings:
+            Type: Map
+            Next: LogOutput
+            ItemsPath: "$.lines"
+            ItemBatcher:
+              MaxItemsPerBatch: 5
+              MaxInputBytesPerBatch: 256000
+            ItemProcessor:
+              ProcessorConfig:
+                Mode: DISTRIBUTED
+                ExecutionType: STANDARD
+              StartAt: ReverseString
+              States:
+                ReverseString:
+                  Type: Task
+                  Resource: !GetAtt ReverseStringsHandler.Arn
+                  End: true
+
+          LogOutput:
             Type: Task
-            Resource: !GetAtt UpperCaseHandler.Arn
+            Resource: !GetAtt LogInput.Arn
             End: true
 
       RoleArn: !GetAtt StateMachineRole.Arn
@@ -45,6 +77,20 @@ Resources:
       CodeUri: lib
       Description: Hello World function
       Handler: com.github.axthosarouris.HelloHandler::handleRequest
+      MemorySize: 1789
+      PackageType: Zip
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: java11
+      Timeout: 60
+
+  LogInput:
+    Type: AWS::Serverless::Function
+    Properties:
+      Architectures:
+        - arm64
+      CodeUri: lib
+      Description: Hello World function
+      Handler: com.github.axthosarouris.LogInput::handleRequest
       MemorySize: 1789
       PackageType: Zip
       Role: !GetAtt LambdaRole.Arn
@@ -117,6 +163,9 @@ Resources:
           - Effect: Allow
             Action:
               - lambda:InvokeFunction
+              - states:DescribeExecution
+              - states:StopExecution
+              - states:StartExecution
             Resource: "*"
 
   DefaultLambdaPermissions:

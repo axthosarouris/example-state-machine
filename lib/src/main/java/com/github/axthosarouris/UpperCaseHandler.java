@@ -1,14 +1,20 @@
 package com.github.axthosarouris;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
-
 import java.util.Locale;
+import java.util.stream.Collectors;
 
-public class UpperCaseHandler implements RequestHandler<Message, Message> {
+public class UpperCaseHandler extends LambdaHandler<Batch, Batch> {
+
+    public UpperCaseHandler() {
+        super(Batch.class);
+    }
 
     @Override
-    public Message handleRequest(Message input, Context context) {
-        return Message.create(input.getText().toUpperCase(Locale.getDefault()),input.isLeft());
+    public Batch processInput(Batch input) {
+        var upperCased = input.getItems().stream()
+                .map(line -> line.toUpperCase(Locale.getDefault()))
+                .collect(Collectors.toList());
+        return Batch.create(upperCased);
     }
+
 }
